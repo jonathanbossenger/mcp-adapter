@@ -312,7 +312,7 @@ wp_register_ability('my-plugin/code-review', [
             ]
         ];
     },
-    'permission_callback' => function($input) {
+    'permission_callback' => function() {
         return current_user_can('edit_posts');
     },
     'meta' => [
