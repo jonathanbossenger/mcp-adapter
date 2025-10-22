@@ -347,7 +347,7 @@ wp_register_ability('my-plugin/analysis-prompt', [
         'required' => ['data']
     ],
     'execute_callback' => function($input) {
-        $data = $input['data'];
+        $data = $input['data'] ?? '';
 
         return [
             'messages' => [
