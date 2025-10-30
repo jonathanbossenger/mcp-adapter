@@ -106,7 +106,7 @@ add_action( 'wp_abilities_api_init', function() {
 });
 ```
 
-The ability is automatically available via the default MCP server at `/wp-json/mcp-adapter/v1/mcp`.
+The ability is automatically available via the default MCP server at `/wp-json/mcp/mcp-adapter-default-server`.
 
 ### Testing the Tool
 
@@ -244,7 +244,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"prompts/list","params":{}}' | wp mcp-ada
 
 ### Default Server
 The MCP Adapter automatically creates a default server that exposes all registered abilities:
-- **Endpoint**: `/wp-json/mcp-adapter/v1/mcp`
+- **Endpoint**: `/wp-json/mcp/mcp-adapter-default-server`
 - **Server ID**: `mcp-adapter-default-server`
 - **Automatic Registration**: All abilities become available immediately
 
