@@ -130,12 +130,33 @@ class PromptsHandler {
 			/**
 			 * Traditional ability-based execution
 			 *
-			 * Assume non-builder based prompts can only be registered with valid abilities.
-			 * If not, the has_permission() will let us know.
+			 * Get the ability for the prompt.
 			 *
-			 * @var \WP_Ability $ability
+			 * @var \WP_Ability|\WP_Error $ability
 			 */
 			$ability = $prompt->get_ability();
+
+			// Check if getting the ability returned an error
+			if ( is_wp_error( $ability ) ) {
+				$this->mcp->error_handler->log(
+					'Failed to get ability for prompt',
+					array(
+						'prompt_name'   => $prompt_name,
+						'error_message' => $ability->get_error_message(),
+					)
+				);
+
+				return array(
+					'error'     => McpErrorFactory::internal_error( $request_id, $ability->get_error_message() )['error'],
+					'_metadata' => array(
+						'component_type' => 'prompt',
+						'prompt_name'    => $prompt_name,
+						'failure_reason' => 'ability_retrieval_failed',
+						'error_code'     => $ability->get_error_code(),
+						'is_builder'     => false,
+					),
+				);
+			}
 
 			// If ability has no input schema and arguments is empty, pass null
 			// This is required by WP_Ability::validate_input() which expects null when no schema

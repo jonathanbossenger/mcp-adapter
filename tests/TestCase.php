@@ -42,7 +42,8 @@ abstract class TestCase extends PolyfillsTestCase {
 		add_action(
 			'wp_abilities_api_categories_init',
 			static function () {
-				if ( \WP_Abilities_Category_Registry::get_instance()->is_registered( 'mcp-adapter' ) ) {
+				$categories_registry = \WP_Ability_Categories_Registry::get_instance();
+				if ( $categories_registry->is_registered( 'mcp-adapter' ) ) {
 					return;
 				}
 
@@ -67,24 +68,27 @@ abstract class TestCase extends PolyfillsTestCase {
 		// Use DummyAbility to register test abilities
 		add_action( 'wp_abilities_api_init', array( DummyAbility::class, 'register_abilities' ) );
 
+		// Register the default MCP abilities inside the hook
+		add_action(
+			'wp_abilities_api_init',
+			static function () {
+				// Only register if they don't already exist to prevent duplicates
+				if ( ! wp_get_ability( 'mcp-adapter/discover-abilities' ) ) {
+					DiscoverAbilitiesAbility::register();
+				}
+				if ( ! wp_get_ability( 'mcp-adapter/get-ability-info' ) ) {
+					GetAbilityInfoAbility::register();
+				}
+				if ( ! wp_get_ability( 'mcp-adapter/execute-ability' ) ) {
+					ExecuteAbilityAbility::register();
+				}
+			}
+		);
+
 		// Ensure abilities API is initialized so MCP abilities can be registered
 		if ( ! did_action( 'wp_abilities_api_init' ) ) {
 			do_action( 'wp_abilities_api_init' );
 		}
-
-		// Register the default MCP abilities directly for tests
-		// Only register if they don't already exist to prevent duplicates
-		if ( ! wp_get_ability( 'mcp-adapter/discover-abilities' ) ) {
-			DiscoverAbilitiesAbility::register();
-		}
-		if ( ! wp_get_ability( 'mcp-adapter/get-ability-info' ) ) {
-			GetAbilityInfoAbility::register();
-		}
-		if ( wp_get_ability( 'mcp-adapter/execute-ability' ) ) {
-			return;
-		}
-
-		ExecuteAbilityAbility::register();
 	}
 
 	/**
@@ -107,12 +111,25 @@ abstract class TestCase extends PolyfillsTestCase {
 	}
 
 	/**
+	 * Set up before each test.
+	 *
+	 * Sets up `_doing_it_wrong` capturing for all tests.
+	 */
+	public function set_up(): void {
+		parent::set_up();
+		$this->doing_it_wrong_log = array();
+		add_action( 'doing_it_wrong_run', array( $this, 'record_doing_it_wrong' ), 10, 3 );
+	}
+
+	/**
 	 * Clean up after each test.
 	 *
 	 * This method resets the state of test handlers to ensure test isolation.
 	 * Automatically resets DummyErrorHandler and DummyObservabilityHandler between tests.
 	 */
 	public function tear_down(): void {
+		remove_action( 'doing_it_wrong_run', array( $this, 'record_doing_it_wrong' ) );
+		$this->doing_it_wrong_log = array();
 		DummyErrorHandler::reset();
 		DummyObservabilityHandler::reset();
 		parent::tear_down();
@@ -143,5 +160,117 @@ abstract class TestCase extends PolyfillsTestCase {
 			$resources,
 			$prompts,
 		);
+	}
+
+	/**
+	 * Asserts that the given value is an instance of WP_Error.
+	 *
+	 * @param mixed  $actual  The value to check.
+	 * @param string $message Optional. Message to display when the assertion fails.
+	 *
+	 * @return void
+	 */
+	public function assertWPError( $actual, string $message = '' ): void {
+		$this->assertInstanceOf( \WP_Error::class, $actual, $message );
+	}
+
+	/**
+	 * Asserts that the given value is not an instance of WP_Error.
+	 *
+	 * @param mixed  $actual  The value to check.
+	 * @param string $message Optional. Message to display when the assertion fails.
+	 *
+	 * @return void
+	 */
+	public function assertNotWPError( $actual, string $message = '' ): void {
+		$this->assertNotInstanceOf( \WP_Error::class, $actual, $message );
+	}
+
+	/**
+	 * Captured `_doing_it_wrong` calls during a test.
+	 *
+	 * @var array<int,array{function:string,message:string,version:string}>
+	 */
+	protected $doing_it_wrong_log = array();
+
+	/**
+	 * Records `_doing_it_wrong` calls for later assertions.
+	 *
+	 * @param string $the_method Function name flagged by `_doing_it_wrong`.
+	 * @param string $message    Message supplied to `_doing_it_wrong`.
+	 * @param string $version    Version string supplied to `_doing_it_wrong`.
+	 *
+	 * @return void
+	 */
+	public function record_doing_it_wrong( string $the_method, string $message, string $version ): void {
+		$this->doing_it_wrong_log[] = array(
+			'function' => $the_method,
+			'message'  => $message,
+			'version'  => $version,
+		);
+	}
+
+	/**
+	 * Registers an ability inside the wp_abilities_api_init hook.
+	 *
+	 * This helper ensures abilities are registered during the hook execution,
+	 * as required by WordPress abilities API which uses doing_action() checks.
+	 *
+	 * @param string               $name The ability name.
+	 * @param array<string, mixed> $args The ability arguments.
+	 *
+	 * @return void
+	 */
+	protected function register_ability_in_hook( string $name, array $args ): void {
+		// If we're already inside the hook, register directly
+		if ( doing_action( 'wp_abilities_api_init' ) ) {
+			wp_register_ability( $name, $args );
+			return;
+		}
+
+		// Create a callback that registers the ability
+		$callback = static function () use ( $name, $args ) {
+			wp_register_ability( $name, $args );
+		};
+
+		// Add the callback to the hook
+		add_action( 'wp_abilities_api_init', $callback, 999 );
+
+		do_action( 'wp_abilities_api_init' );
+
+		// Clean up the callback to prevent duplicate registrations if hook fires again
+		remove_action( 'wp_abilities_api_init', $callback, 999 );
+	}
+
+	/**
+	 * Asserts that `_doing_it_wrong` was triggered for the expected function.
+	 *
+	 * @param string      $the_method         Function name expected to trigger `_doing_it_wrong`.
+	 * @param string|null $message_contains Optional. String that should be contained in the error message.
+	 *
+	 * @return void
+	 */
+	protected function assertDoingItWrongTriggered( string $the_method, ?string $message_contains = null ): void {
+		foreach ( $this->doing_it_wrong_log as $entry ) {
+			if ( $the_method === $entry['function'] ) {
+				// If message check is specified, verify it contains the expected text.
+				if ( null !== $message_contains && false === strpos( $entry['message'], $message_contains ) ) {
+					continue;
+				}
+				return;
+			}
+		}
+
+		if ( null !== $message_contains ) {
+			$this->fail(
+				sprintf(
+					'Failed asserting that _doing_it_wrong() was triggered for %s with message containing "%s".',
+					$the_method,
+					$message_contains
+				)
+			);
+		} else {
+			$this->fail( sprintf( 'Failed asserting that _doing_it_wrong() was triggered for %s.', $the_method ) );
+		}
 	}
 }

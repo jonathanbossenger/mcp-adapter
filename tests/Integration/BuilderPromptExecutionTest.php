@@ -121,7 +121,9 @@ final class BuilderPromptExecutionTest extends TestCase {
 
 		// Verify complete ability bypass
 		$this->assertTrue( $prompt->is_builder_based() );
-		$this->assertNull( $prompt->get_ability() );
+		$ability = $prompt->get_ability();
+		$this->assertWPError( $ability );
+		$this->assertEquals( 'builder_has_no_ability', $ability->get_error_code() );
 
 		// Verify direct execution works
 		$this->assertTrue( $prompt->check_permission_direct( array() ) );

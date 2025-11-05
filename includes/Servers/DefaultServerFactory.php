@@ -32,7 +32,6 @@ class DefaultServerFactory {
 	 * the McpAdapter.
 	 *
 	 * @return void
-	 * @throws \Exception
 	 */
 	public static function create(): void {
 
@@ -71,7 +70,7 @@ class DefaultServerFactory {
 
 		// Use McpAdapter to create the server with full validation
 		$adapter = McpAdapter::instance();
-		$adapter->create_server(
+		$result  = $adapter->create_server(
 			$config['server_id'],
 			$config['server_route_namespace'],
 			$config['server_route'],
@@ -84,6 +83,22 @@ class DefaultServerFactory {
 			$config['tools'],
 			$config['resources'],
 			$config['prompts']
+		);
+
+		// Log error if server creation failed, but don't halt execution.
+		// This allows other servers to be registered even if default server fails.
+		if ( ! is_wp_error( $result ) ) {
+			return;
+		}
+
+		_doing_it_wrong(
+			__METHOD__,
+			sprintf(
+				'MCP Adapter: Failed to create default server. Error: %s (Code: %s)',
+				esc_html( $result->get_error_message() ),
+				esc_html( (string) $result->get_error_code() )
+			),
+			'n.e.x.t'
 		);
 	}
 
