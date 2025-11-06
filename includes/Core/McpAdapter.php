@@ -58,7 +58,7 @@ final class McpAdapter {
 
 			// In WP-CLI context, initialize immediately so commands have access to servers
 			if ( defined( 'WP_CLI' ) && constant( 'WP_CLI' ) ) {
-				self::$instance->init();
+				add_action( 'init', array( self::$instance, 'init' ), 20 );
 			} else {
 				// Initialize for REST API requests with reasonable priority
 				add_action( 'rest_api_init', array( self::$instance, 'init' ), 15 );
@@ -115,7 +115,7 @@ final class McpAdapter {
 			return new \WP_Error(
 				'invalid_error_handler',
 				sprintf(
-				/* translators: %s: error handler class name */
+					/* translators: %s: error handler class name */
 					esc_html__( 'Error handler class "%s" does not exist.', 'mcp-adapter' ),
 					esc_html( $error_handler )
 				)
