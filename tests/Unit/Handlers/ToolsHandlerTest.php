@@ -356,9 +356,6 @@ final class ToolsHandlerTest extends TestCase {
 		$this->assertSame( 'hello-world', $captured_input, 'Ability should receive unwrapped argument from metadata flag.' );
 		$this->assertArrayHasKey( 'structuredContent', $res );
 		$this->assertArrayNotHasKey( '_metadata', $res['structuredContent'] );
-		$this->assertSame( 'hello-world', $captured_input, 'Ability should receive unwrapped argument from metadata flag.' );
-		$this->assertArrayHasKey( 'structuredContent', $res );
-		$this->assertArrayNotHasKey( '_metadata', $res['structuredContent'] );
 		$this->assertSame( array( 'result' => 'hello-world' ), $res['structuredContent'] );
 
 		wp_unregister_ability( 'test/flat-transform-call' );
