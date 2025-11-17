@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace WP\MCP\Domain\Tools;
 
 use WP\MCP\Core\McpServer;
+use WP\MCP\Domain\Utils\McpAnnotationMapper;
 use WP_Ability;
 
 /**
@@ -77,13 +78,14 @@ class RegisterAbilityAsMcpTool {
 
 		$tool_data = array(
 			'ability'     => $this->ability->get_name(),
-			'name'        => str_replace( '/', '-', $this->ability->get_name() ),
-			'description' => $this->ability->get_description(),
+			'name'        => str_replace( '/', '-', trim( $this->ability->get_name() ) ),
+			'description' => trim( $this->ability->get_description() ),
 			'inputSchema' => $input_schema,
 		);
 
 		// Add optional title from ability label.
 		$label = $this->ability->get_label();
+		$label = trim( $label );
 		if ( ! empty( $label ) ) {
 			$tool_data['title'] = $label;
 		}
@@ -94,10 +96,18 @@ class RegisterAbilityAsMcpTool {
 			$tool_data['outputSchema'] = $output_schema;
 		}
 
-		// get annotations from ability meta.
+		// Map annotations from ability meta to MCP format using unified mapper.
 		$ability_meta = $this->ability->get_meta();
-		if ( ! empty( $ability_meta['annotations'] ) ) {
-			$tool_data['annotations'] = $ability_meta['annotations'];
+		if ( ! empty( $ability_meta['annotations'] ) && is_array( $ability_meta['annotations'] ) ) {
+			$mcp_annotations = McpAnnotationMapper::map( $ability_meta['annotations'], 'tool' );
+			if ( ! empty( $mcp_annotations ) ) {
+				$tool_data['annotations'] = $mcp_annotations;
+			}
+		}
+
+		// Set annotations.title from label if annotations exist but don't have a title.
+		if ( ! empty( $label ) && isset( $tool_data['annotations'] ) && ! isset( $tool_data['annotations']['title'] ) ) {
+			$tool_data['annotations']['title'] = $label;
 		}
 
 		return $tool_data;
