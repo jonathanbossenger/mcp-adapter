@@ -290,10 +290,11 @@ final class PromptsHandlerTest extends TestCase {
 			)
 		);
 
-		// Short-circuit returns JSONRPCErrorResponse.
+		// Short-circuit returns JSONRPCErrorResponse with internal_error code.
 		$this->assertInstanceOf( JSONRPCErrorResponse::class, $result );
 		$error = $result->getError();
 		$this->assertNotNull( $error );
+		$this->assertSame( -32603, $error->getCode() );
 		$this->assertStringContainsString( 'Prompt access blocked', $error->getMessage() );
 
 		remove_filter( 'mcp_adapter_pre_prompt_get', $filter );
@@ -933,7 +934,78 @@ final class PromptsHandlerTest extends TestCase {
 		wp_unregister_ability( 'test/invalid-content-prompt' );
 	}
 
-	public function test_list_prompts_withFilterReturningNonArray_fallsBackToOriginal(): void {
+	public function test_get_prompt_with_string_arguments_returns_invalid_params_error(): void {
+		$server  = $this->makeServer( array(), array(), array( 'test/always-allowed' ) );
+		$handler = new PromptsHandler( $server );
+		$result  = $handler->get_prompt(
+			array(
+				'params' => array(
+					'name'      => 'test-always-allowed',
+					'arguments' => 'invalid',
+				),
+			),
+			1
+		);
+
+		$this->assertInstanceOf( JSONRPCErrorResponse::class, $result );
+		$error = $result->getError();
+		$this->assertNotNull( $error );
+		$this->assertSame( -32602, $error->getCode() );
+		$this->assertStringContainsString( 'arguments must be an object', $error->getMessage() );
+	}
+
+	public function test_get_prompt_with_integer_arguments_returns_invalid_params_error(): void {
+		$server  = $this->makeServer( array(), array(), array( 'test/always-allowed' ) );
+		$handler = new PromptsHandler( $server );
+		$result  = $handler->get_prompt(
+			array(
+				'params' => array(
+					'name'      => 'test-always-allowed',
+					'arguments' => 42,
+				),
+			),
+			1
+		);
+
+		$this->assertInstanceOf( JSONRPCErrorResponse::class, $result );
+		$error = $result->getError();
+		$this->assertNotNull( $error );
+		$this->assertSame( -32602, $error->getCode() );
+		$this->assertStringContainsString( 'arguments must be an object', $error->getMessage() );
+	}
+
+	public function test_get_prompt_with_null_arguments_succeeds(): void {
+		$server  = $this->makeServer( array(), array(), array( 'test/always-allowed' ) );
+		$handler = new PromptsHandler( $server );
+		$result  = $handler->get_prompt(
+			array(
+				'params' => array(
+					'name'      => 'test-always-allowed',
+					'arguments' => null,
+				),
+			)
+		);
+
+		// null arguments should default to empty array and succeed.
+		$this->assertInstanceOf( GetPromptResult::class, $result );
+	}
+
+	public function test_get_prompt_with_missing_arguments_succeeds(): void {
+		$server  = $this->makeServer( array(), array(), array( 'test/always-allowed' ) );
+		$handler = new PromptsHandler( $server );
+		$result  = $handler->get_prompt(
+			array(
+				'params' => array(
+					'name' => 'test-always-allowed',
+				),
+			)
+		);
+
+		// Missing arguments should default to empty array and succeed.
+		$this->assertInstanceOf( GetPromptResult::class, $result );
+	}
+
+	public function test_list_prompts_with_filter_returning_non_array_falls_back_to_original(): void {
 		$server  = $this->makeServer( array(), array(), array( 'test/always-allowed' ) );
 		$handler = new PromptsHandler( $server );
 
