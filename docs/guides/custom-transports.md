@@ -4,7 +4,7 @@ This guide covers how to implement custom transport layers for the MCP Adapter w
 
 ## Built-in Transports
 
-- ✅ **`HttpTransport`** - Recommended (implements MCP 2025-06-18 specification)
+- ✅ **`HttpTransport`** - Recommended (implements MCP 2025-11-25 specification)
 - ✅ **`STDIO Transport`** - Available via WP-CLI commands
 
 ## When to Create Custom Transports
@@ -86,14 +86,14 @@ class ApiKeyTransport implements McpRestTransportInterface {
     }
     
     public function check_permission( \WP_REST_Request $request ) {
-        $api_key = $request->get_header( 'X-API-Key' );
-        
+        $api_key = sanitize_text_field( $request->get_header( 'X-API-Key' ) );
+
         if ( empty( $api_key ) ) {
             return false;
         }
-        
+
         // Validate against stored keys
-        $valid_keys = get_option( 'mcp_api_keys', [] );
+        $valid_keys = get_option( 'mcp_api_keys', array() );
         return in_array( $api_key, $valid_keys, true );
     }
     
@@ -131,9 +131,10 @@ add_action( 'mcp_adapter_init', function( $adapter ) {
         'Secure MCP Server',
         'MCP server with API key authentication',
         '1.0.0',
-        [ ApiKeyTransport::class ], // Use custom transport
+        array( ApiKeyTransport::class ), // Use custom transport
         \WP\MCP\Infrastructure\ErrorHandling\ErrorLogMcpErrorHandler::class,
-        [ 'my-plugin/secure-tool' ]
+        null,                            // Observability handler (null = default)
+        array( 'my-plugin/secure-tool' ) // Tools
     );
 });
 ```

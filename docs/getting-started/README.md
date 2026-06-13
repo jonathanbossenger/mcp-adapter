@@ -111,9 +111,10 @@ add_action( 'mcp_adapter_init', function( $adapter ) {
         'My First MCP Server',                      // Human-readable name
         'A simple MCP server for demonstration',    // Description
         '1.0.0',                                    // Version
-        [ \WP\MCP\Transport\HttpTransport::class ], // Transport methods
+        array( \WP\MCP\Transport\HttpTransport::class ), // Transport methods
         \WP\MCP\Infrastructure\ErrorHandling\ErrorLogMcpErrorHandler::class, // Error handler
-        [ 'my-plugin/get-site-info' ]              // Abilities to expose as tools
+        null,                                       // Observability handler (null = default)
+        array( 'my-plugin/get-site-info' )          // Abilities to expose as tools
     );
 });
 ```
@@ -142,40 +143,15 @@ curl -X POST "https://yoursite.com/wp-json/mcp/mcp-adapter-default-server" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
 
-## What Just Happened?
-
-1. **Ability Registration**: You created a WordPress ability that retrieves site information
-2. **Automatic Exposure**: The MCP Adapter automatically exposes your ability as an MCP tool
-3. **REST API Integration**: The adapter created REST endpoints for MCP communication
-4. **AI Agent Access**: AI agents can now discover and use your functionality
-
 ## Next Steps
 
-### Learn More
 - **[Creating Abilities](../guides/creating-abilities.md)** - Build tools, resources, and prompts
 - **[Installation Guide](installation.md)** - Detailed installation options
 - **[Architecture Overview](../architecture/overview.md)** - Understand system design
-
-### Advanced Topics
 - **[Error Handling](../guides/error-handling.md)** - Custom logging and monitoring
 - **[Transport Permissions](../guides/transport-permissions.md)** - Authentication and authorization
 - **[CLI Usage](../guides/cli-usage.md)** - Command-line MCP server management
 
 ## Troubleshooting
 
-**MCP Adapter not found?**
-- Verify installation method (Composer vs Plugin)
-- Check autoloader is loaded correctly
-- Ensure WordPress Abilities API is available
-
-**REST API not responding?**
-- Test basic REST API: `curl "https://yoursite.com/wp-json/"`
-- Verify permalink structure is not "Plain"
-- Check WordPress user authentication
-
-**Tool not appearing?**
-- Confirm ability is registered during `wp_abilities_api_init`
-- Verify ability name matches exactly in server configuration
-- Check permission callback allows current user
-
-For detailed troubleshooting, see the [Installation Guide](installation.md#troubleshooting).
+See the [Common Issues guide](../troubleshooting/common-issues.md).

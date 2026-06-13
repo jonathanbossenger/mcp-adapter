@@ -178,6 +178,15 @@ add_filter( 'mcp_adapter_session_inactivity_timeout', function () {
 } );
 ```
 
+**`mcp_adapter_session_activity_update_interval`** — Minimum number of seconds between activity timestamp updates for an active session. Updating the timestamp on every request adds a database write; this interval throttles those writes. Default: `60` seconds.
+
+```php
+// Update activity timestamp at most every 5 minutes
+add_filter( 'mcp_adapter_session_activity_update_interval', function () {
+    return 5 * MINUTE_IN_SECONDS;
+} );
+```
+
 Sessions are stored in user meta and are cleaned up automatically when a new session is created or an existing session is validated.
 
 ### STDIO transport (WP-CLI)
@@ -424,48 +433,6 @@ add_filter('mcp_adapter_execute_ability_capability', function() {
 });
 ```
 
-## Customization
-
-### Server Configuration Filter
-
-You can customize the entire server configuration using the `mcp_adapter_default_server_config` filter:
-
-```php
-add_filter('mcp_adapter_default_server_config', function($config) {
-    // Change server name
-    $config['server_name'] = 'My Custom MCP Server';
-    
-    // Add custom error handler
-    $config['error_handler'] = MyCustomErrorHandler::class;
-    
-    // Add additional tools
-    $config['tools'][] = 'my-plugin/custom-tool';
-    
-    return $config;
-});
-```
-
-### Adding Resources and Prompts
-
-The default server can be extended with resources and prompts:
-
-```php
-add_filter('mcp_adapter_default_server_config', function($config) {
-    // Add resources
-    $config['resources'] = [
-        'my-plugin/site-config',
-        'my-plugin/user-data'
-    ];
-    
-    // Add prompts  
-    $config['prompts'] = [
-        'my-plugin/code-review',
-        'my-plugin/content-analysis'
-    ];
-    
-    return $config;
-});
-```
 
 ## Usage Examples
 
